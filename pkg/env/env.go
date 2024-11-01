@@ -8,6 +8,11 @@ import (
 )
 
 var (
+	// Server
+	BEHost string
+	BEPort string
+
+	// Openai
 	OpenAPIKey       string
 	AssistantIDNindy string
 )
@@ -20,6 +25,8 @@ func InitializeEnv() {
 		panic(err)
 	}
 
+	BEHost = os.Getenv("BE_HOST")
+	BEPort = os.Getenv("BE_PORT")
 	OpenAPIKey = os.Getenv("open_api_key")
 	AssistantIDNindy = os.Getenv("assistant_id_nindy")
 

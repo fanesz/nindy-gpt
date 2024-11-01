@@ -14,5 +14,5 @@ func main() {
 	router.InitializeRoutes()
 
 	routerInstance := router.GetRouterInstance()
-	routerInstance.Run(":5000")
+	routerInstance.Run(env.BEHost + ":" + env.BEPort)
 }
