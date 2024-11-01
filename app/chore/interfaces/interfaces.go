@@ -1,5 +1,7 @@
 package interfaces
 
+import "nindy-gpt/app/chore/entity"
+
 type NindyGPTService interface {
-	Chat(message string) (string, error)
+	Chat(req *entity.ChatRequest) (string, error)
 }

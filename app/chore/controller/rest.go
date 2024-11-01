@@ -40,7 +40,7 @@ func (c *nindyGPTController) Register(router *gin.Engine) {
 			return
 		}
 
-		resp, err := c.service.Chat(req.Message)
+		resp, err := c.service.Chat(&req)
 		if err != nil {
 			ctx.JSON(500, gin.H{"error": err.Error()})
 			return

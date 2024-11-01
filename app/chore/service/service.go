@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"nindy-gpt/app/chore/entity"
 	"nindy-gpt/app/chore/interfaces"
 	"nindy-gpt/app/config"
 	"nindy-gpt/pkg/env"
+	"strings"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
@@ -24,16 +26,24 @@ func NewNindyGPTService(client *openai.Client, ctx context.Context) interfaces.N
 	}
 }
 
-func (s *nindyGPTService) Chat(message string) (string, error) {
+func (s *nindyGPTService) Chat(req *entity.ChatRequest) (string, error) {
 	threadID, err := config.GetThreadID()
 	if err != nil {
 		return "", err
 	}
 
-	_, err = s.client.CreateMessage(s.context, threadID, openai.MessageRequest{
+	messageRequest := openai.MessageRequest{
 		Role:    openai.ChatMessageRoleUser,
-		Content: message,
-	})
+		Content: req.Message,
+	}
+
+	if req.Sender != "" {
+		messageRequest.Metadata = map[string]any{
+			"user_name": req.Sender,
+		}
+	}
+
+	_, err = s.client.CreateMessage(s.context, threadID, messageRequest)
 	if err != nil {
 		return "", err
 	}
@@ -62,5 +72,8 @@ func (s *nindyGPTService) Chat(message string) (string, error) {
 		return "", err
 	}
 
-	return messages.Messages[0].Content[0].Text.Value, nil
+	response := messages.Messages[0].Content[0].Text.Value
+	response = strings.ReplaceAll(response, "[user_name]", req.Sender)
+
+	return response, nil
 }
