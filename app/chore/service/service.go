@@ -30,6 +30,14 @@ func (s *nindyGPTService) Chat(message string) (string, error) {
 		return "", err
 	}
 
+	_, err = s.client.CreateMessage(s.context, threadID, openai.MessageRequest{
+		Role:    openai.ChatMessageRoleUser,
+		Content: message,
+	})
+	if err != nil {
+		return "", err
+	}
+
 	run, err := s.client.CreateRun(s.context, threadID, openai.RunRequest{
 		AssistantID: env.AssistantIDNindy,
 	})
