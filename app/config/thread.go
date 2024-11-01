@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,7 +16,7 @@ type Data struct {
 	ThreadID string `json:"thread_id"`
 }
 
-var filename = "app/config/session.json"
+var filename = "session.json"
 
 func InitializeThread() {
 	ctx := context.Background()
@@ -36,11 +37,10 @@ func InitializeThread() {
 			log.Fatal(err)
 		}
 	} else {
-		run, err := client.RetrieveThread(ctx, threadID)
+		_, err := client.RetrieveThread(ctx, threadID)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(run.ID)
 	}
 }
 
@@ -73,6 +73,27 @@ func EditThreadID(newThreadID string) error {
 func readJSONFile(data *Data) error {
 	file, err := os.Open(filename)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Println("session.json not found, creating a new one...")
+			file, err = os.Create(filename)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			defaultData := Data{ThreadID: ""}
+			data = &defaultData
+			jsonData, err := json.MarshalIndent(defaultData, "", "  ")
+			if err != nil {
+				return err
+			}
+			_, err = file.Write(jsonData)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
 		return err
 	}
 	defer file.Close()

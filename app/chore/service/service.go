@@ -5,6 +5,7 @@ import (
 	"nindy-gpt/app/chore/entity"
 	"nindy-gpt/app/chore/interfaces"
 	"nindy-gpt/app/config"
+	"nindy-gpt/app/database"
 	"nindy-gpt/pkg/env"
 	"strings"
 	"time"
@@ -37,17 +38,20 @@ func (s *nindyGPTService) Chat(req *entity.ChatRequest) (string, error) {
 		Content: req.Message,
 	}
 
+	// add metadata if sender is not empty
 	if req.Sender != "" {
 		messageRequest.Metadata = map[string]any{
 			"user_name": req.Sender,
 		}
 	}
 
+	// create message to current active thread
 	_, err = s.client.CreateMessage(s.context, threadID, messageRequest)
 	if err != nil {
 		return "", err
 	}
 
+	// sending message to current active thread
 	run, err := s.client.CreateRun(s.context, threadID, openai.RunRequest{
 		AssistantID: env.AssistantIDNindy,
 	})
@@ -55,6 +59,7 @@ func (s *nindyGPTService) Chat(req *entity.ChatRequest) (string, error) {
 		return "", err
 	}
 
+	// wait until the run is completed
 	for run.Status == openai.RunStatusQueued || run.Status == openai.RunStatusInProgress {
 		run, err = s.client.RetrieveRun(s.context, run.ThreadID, run.ID)
 		if err != nil {
@@ -66,6 +71,7 @@ func (s *nindyGPTService) Chat(req *entity.ChatRequest) (string, error) {
 		return "", err
 	}
 
+	// get the response
 	numMessages := 1
 	messages, err := s.client.ListMessage(s.context, run.ThreadID, &numMessages, nil, nil, nil, nil)
 	if err != nil {
@@ -73,7 +79,15 @@ func (s *nindyGPTService) Chat(req *entity.ChatRequest) (string, error) {
 	}
 
 	response := messages.Messages[0].Content[0].Text.Value
-	response = strings.ReplaceAll(response, "[user_name]", req.Sender)
+
+	// insert chat history
+	go database.Insert(req.Sender, req.Message, response)
+
+	// replace placeholders
+	placeholders := []string{"[user_name]", "{user_name}", "<user_name>", "(user_name)"}
+	for _, placeholder := range placeholders {
+		response = strings.ReplaceAll(response, placeholder, req.Sender)
+	}
 
 	return response, nil
 }
